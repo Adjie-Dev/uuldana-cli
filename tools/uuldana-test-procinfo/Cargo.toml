@@ -1,0 +1,19 @@
+[package]
+name = "uuldana-test-procinfo"
+version = "0.0.0"
+edition = "2021"
+publish = false
+description = "Test-only Windows process discovery helper. Not part of the Uuldana workspace."
+
+# An empty table keeps this crate out of any enclosing workspace, so the workspace
+# `unsafe_code = "forbid"` lint does not apply to the FFI below.
+[workspace]
+
+[dependencies]
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(procinfo_fault)'] }
+
+[profile.release]
+opt-level = "s"
+codegen-units = 1

@@ -1,0 +1,15 @@
+[package]
+name = "uuldana-core"
+description = "Provider-agnostic contracts for the Uuldana agent supervisor: adapters, capabilities, sessions, events and permissions."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+# Policy: uuldana-core has no third-party dependencies (see docs/adr/0005).
+[dependencies]
+
+[lints]
+workspace = true

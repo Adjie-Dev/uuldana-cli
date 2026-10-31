@@ -1,0 +1,11 @@
+{
+  ".cargo_vcs_info.json": "89b685a086ccda3c9bed9e40b2c42a17ac3248e04c8cf2e6338f0ac70a793b8a",
+  "Cargo.toml": "ae0b131f5abd4c2a0163a3c73a47ec68c0f76b77eb33f8b346a202749d4bd0de",
+  "Cargo.toml.orig": "355aacf5d6f4f2d788f6d5b4b8c3dbe7f2590a2f42e70682f13f62b7f2ebfe6f",
+  "src\\cleanup.rs": "216f6166078692ae5251eac43dae9c6f02d3561a5356dde1d3790f74fee580d8",
+  "src\\lib.rs": "bdf9d34811312b6a1a28de8b76cf87b5d0bc279b7cd65e26443f7f959f145786",
+  "src\\sys.rs": "05019874f1e3f1fb457eae14aec5a765df1b0e98a1e3c7e2ee39cdc11ebfbdfa",
+  "src\\bin\\jobobject-fixture.rs": "ec9a582296759a4c6aae55e9b2262e93080a5cfea2eeeaa4cd87489070098a6d",
+  "tests\\containment.rs": "18c30e3a09ca3a16ab7005c89033e73e343ed762e5ea77d96b4c4b2722dca402",
+  "tests\\failure_cleanup.rs": "66dbd15c979885d309a38ea383e96142546af640583b8cdf8277d1a7bb3b9c7a"
+}

@@ -1,0 +1,92 @@
+name: Rust CI
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify (${{ matrix.os }}, ${{ matrix.toolchain }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            toolchain: stable-x86_64-unknown-linux-gnu
+          - os: macos-latest
+            toolchain: stable
+          - os: windows-latest
+            toolchain: stable-x86_64-pc-windows-msvc
+          - os: windows-latest
+            toolchain: stable-x86_64-pc-windows-gnu
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install explicit host toolchain
+        run: rustup toolchain install ${{ matrix.toolchain }} --profile minimal --component rustfmt --component clippy --no-self-update
+      - name: Select stable toolchain
+        run: rustup default ${{ matrix.toolchain }}
+      - name: Report toolchain
+        run: rustc -vV
+      - name: Install native Windows GNU prerequisites
+        if: matrix.toolchain == 'stable-x86_64-pc-windows-gnu'
+        shell: pwsh
+        run: |
+          ./scripts/install-windows-gnu.ps1
+          (Join-Path $env:LOCALAPPDATA 'uuldana/toolchains/msys2-mingw64-20261012/mingw64/bin') | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Build Windows test process helper
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          ./scripts/prepare-test-helper.ps1
+          "UULDANA_TEST_PROCINFO=$env:UULDANA_TEST_PROCINFO" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Test
+        run: cargo test --workspace --locked
+      - name: Test all targets including keyboard encoding
+        run: cargo test --workspace --all-targets --locked
+      - name: Check
+        run: cargo check --workspace --locked
+      - name: Build subprocess test fixture
+        run: cargo build -p uuldana-transport --example uuldana-test-child --locked
+      - name: Scripted PTY feasibility probe
+        run: cargo run -p uuldana-transport --example pty_probe --locked -- --scripted
+      - name: Native Windows backend suspension regression
+        if: runner.os == 'Windows'
+        env:
+          CARGO_TARGET_DIR: ${{ github.workspace }}/target/portable-pty
+        run: cargo test --manifest-path vendor/portable-pty/Cargo.toml --lib --locked
+      - name: Repeated stress tests with external process watchdogs
+        run: python scripts/stress.py --parallel-runs 4 --sequential-runs 3 --deadline 60
+      - name: Native Windows Job completion observer
+        if: runner.os == 'Windows'
+        env:
+          CARGO_TARGET_DIR: ${{ github.workspace }}/target/native-jobobject
+        run: |
+          cargo fmt --manifest-path vendor/subc-jobobject/Cargo.toml -- --check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo clippy --manifest-path vendor/subc-jobobject/Cargo.toml --lib --locked -- -D warnings
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo test --manifest-path vendor/subc-jobobject/Cargo.toml --lib --locked
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify watchdog cleanup across Unix process groups
+        if: runner.os != 'Windows'
+        run: python -m unittest discover -s scripts/tests -v
+
+  audit:
+    name: Dependency advisories
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+      - name: Check Cargo.lock against the RustSec database
+        run: cargo audit

@@ -1,0 +1,17 @@
+[package]
+name = "uuldana-providers"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Provider adapters for Uuldana: agents learned from their own help, and agents described by manifests"
+
+[dependencies]
+uuldana-provider-sdk.workspace = true
+serde_json = "1"
+
+[dev-dependencies]
+uuldana-runtime = { path = "../uuldana-runtime" }
+
+[lints]
+workspace = true

@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "id": "my-agent",
+  "name": "My Agent",
+  "executables": ["my-agent"],
+  "version_args": ["--version"],
+  "version_contains": "my-agent",
+  "modes": [
+    {
+      "approval": "never_ask",
+      "filesystem": "unrestricted",
+      "network": "allowed",
+      "args": ["--yes"]
+    },
+    {
+      "approval": "ask_every_action",
+      "filesystem": "unrestricted",
+      "network": "allowed",
+      "args": []
+    }
+  ],
+  "prompt_args": ["--prompt", "{prompt}"],
+  "resume_args": ["--resume", "{session}"],
+  "session_id_args": ["--session-id", "{session}"],
+  "interrupts": 2,
+  "limit_phrases": ["quota exhausted"]
+}

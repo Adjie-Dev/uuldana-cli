@@ -1,0 +1,15 @@
+[package]
+name = "uuldana-provider-sdk"
+description = "Stable entry point for writing Uuldana provider adapters."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+uuldana-core.workspace = true
+
+[lints]
+workspace = true

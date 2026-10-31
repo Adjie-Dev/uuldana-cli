@@ -1,0 +1,26 @@
+[package]
+name = "subc-jobobject"
+version = "0.2.1"
+edition = "2021"
+license = "MIT"
+publish = true
+description = "Windows job-object containment for supervised subc module children."
+
+[dependencies]
+tokio = { version = "1", features = ["process"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_System_Console",
+    "Win32_Security",
+    "Win32_System_Diagnostics_ToolHelp",
+    "Win32_System_JobObjects",
+    "Win32_System_Threading",
+] }
+
+[lints.rust]
+unsafe_code = "deny"
+
+[dev-dependencies]
+cortexkit-test-support = "0.1.3"

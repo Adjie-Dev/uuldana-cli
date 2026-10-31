@@ -1,0 +1,66 @@
+name: Release archives
+# Builds the release archives and checksums and keeps them as workflow
+# artifacts. It does not create a GitHub release, publish a crate or upload
+# anywhere else. Publishing is a separate, deliberate step (docs/RELEASING.md).
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Package (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            toolchain: stable-x86_64-unknown-linux-gnu
+          - os: macos-latest
+            toolchain: stable
+          - os: windows-latest
+            toolchain: stable-x86_64-pc-windows-msvc
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: rustup toolchain install ${{ matrix.toolchain }} --profile minimal --no-self-update
+      - name: Select toolchain
+        run: rustup default ${{ matrix.toolchain }}
+      - name: Package (Unix)
+        if: runner.os != 'Windows'
+        run: sh scripts/package-release.sh
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/package-release.ps1
+      - name: Smoke test the packaged binary
+        shell: bash
+        run: |
+          set -e
+          cd target/dist
+          for archive in *.tar.gz; do
+            [ -e "$archive" ] || continue
+            tar -xzf "$archive"
+          done
+          for archive in *.zip; do
+            [ -e "$archive" ] || continue
+            unzip -q "$archive"
+          done
+          for binary in */uuldana */uuldana.exe; do
+            [ -e "$binary" ] || continue
+            "$binary" --version
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: uuldana-${{ matrix.os }}
+          path: |
+            target/dist/*.zip
+            target/dist/*.tar.gz
+            target/dist/*.sha256
+          if-no-files-found: error

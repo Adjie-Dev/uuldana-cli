@@ -1,0 +1,31 @@
+[package]
+name = "uuldana-cli"
+description = "The `uuldana` command: a universal, open-source native AI coding agent supervisor."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[[bin]]
+name = "uuldana"
+path = "src/main.rs"
+
+[dependencies]
+uuldana-core.workspace = true
+uuldana-providers = { path = "../uuldana-providers" }
+uuldana-runtime = { path = "../uuldana-runtime" }
+crossterm = "0.29"
+vt100 = "0.18"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
+
+[dev-dependencies]
+uuldana-transport = { path = "../uuldana-transport" }
+serde_json = "1"
+
+[lints]
+workspace = true
+
+[target."cfg(windows)".dependencies]
+clipboard-win = "5"

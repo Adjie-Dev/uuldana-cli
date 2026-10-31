@@ -1,0 +1,31 @@
+[workspace]
+resolver = "3"
+# Glob membership lets independently owned crates (for example the runtime and
+# transport crates) join the workspace without editing this file.
+members = ["crates/*"]
+exclude = ["vendor/portable-pty", "vendor/subc-jobobject"]
+
+[patch.crates-io]
+portable-pty = { path = "vendor/portable-pty" }
+subc-jobobject = { path = "vendor/subc-jobobject" }
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+authors = ["Ang Hae Jhie (Anicca Code)"]
+description = "A universal, open-source native AI coding agent supervisor with automatic failover, seamless context handoff, and unified session history."
+keywords = ["cli", "agent", "supervisor", "pty", "acp"]
+categories = ["command-line-utilities", "development-tools"]
+
+[workspace.dependencies]
+uuldana-core = { path = "crates/uuldana-core", version = "0.1.0" }
+uuldana-provider-sdk = { path = "crates/uuldana-provider-sdk", version = "0.1.0" }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }

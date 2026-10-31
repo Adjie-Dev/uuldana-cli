@@ -1,0 +1,14 @@
+/target
+**/target/
+__pycache__/
+*.pyc
+*.log
+*.tgz
+node_modules/
+.remember/
+.claude/
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+.DS_Store

@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "permissions": {
+    "approval": "ask_for_risky",
+    "filesystem": "unrestricted",
+    "network": "allowed"
+  },
+  "cooldown_minutes": 300,
+  "failover": true,
+  "providers": [
+    {
+      "id": "agent-a",
+      "label": "agent-a-work",
+      "env": { "AGENT_A_CONFIG_DIR": "/home/me/.agent-a-work" }
+    },
+    { "id": "agent-a", "label": "agent-a-personal" },
+    { "id": "agent-b", "cooldown_minutes": 120 },
+    { "id": "my-agent" }
+  ]
+}

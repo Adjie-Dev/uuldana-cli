@@ -1,0 +1,15 @@
+{
+  "name": "uuldana",
+  "version": "0.1.0",
+  "description": "A native AI coding agent supervisor with automatic failover, context handoff, and unified session history.",
+  "license": "MIT",
+  "author": "Ang Hae Jhie (Anicca Code)",
+  "bugs": { "email": "aniccacodestudio@gmail.com" },
+  "bin": { "uuldana": "bin/uuldana.js" },
+  "files": ["bin", "README.md", "LICENSE-MIT", "THIRD_PARTY_NOTICES.md"],
+  "engines": { "node": ">=18" },
+  "keywords": ["cli", "agent", "supervisor", "pty", "failover"],
+  "optionalDependencies": {
+    "@uuldana/win32-x64": "0.1.0"
+  }
+}

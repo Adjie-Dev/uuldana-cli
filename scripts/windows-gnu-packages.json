@@ -1,0 +1,12 @@
+[
+  { "file": "mingw-w64-x86_64-binutils-2.47-4-any.pkg.tar.zst", "sha256": "e36c52a7fe1d104c2efd97dc74162386eabf8323f6aeb9b83aeb574b291a7da0" },
+  { "file": "mingw-w64-x86_64-gettext-runtime-1.0-1-any.pkg.tar.zst", "sha256": "be68d7f260633284b910c588c6d82ee304a81c8817a686d2cd9df83f872c27af" },
+  { "file": "mingw-w64-x86_64-libwinpthread-14.0.0.r426.g4564ee4b5-1-any.pkg.tar.zst", "sha256": "543017ce2731292b215bf1d36fd70a86d8a8d5ed0afba9d3db9fff89804cda71" },
+  { "file": "mingw-w64-x86_64-zlib-1.3.2-2-any.pkg.tar.zst", "sha256": "9e75842a070ba648e986e12424e1c92c9d7d77200e85f6a34eeb600819f2e694" },
+  { "file": "mingw-w64-x86_64-zstd-1.5.7-2-any.pkg.tar.zst", "sha256": "1add6705b344664f6aca108c85f79ab5bdd9e1162662bb06a4cf40a34f6e0907" },
+  { "file": "mingw-w64-x86_64-cc-libs-16.2.0-5-any.pkg.tar.zst", "sha256": "634be1b3679f61a13cb02509870c458c5da0dee0b5e3276a81e916e45b65f363" },
+  { "file": "mingw-w64-x86_64-libiconv-1.19-1-any.pkg.tar.zst", "sha256": "21e334d0911f25de75d3e18e0697648bcecfa9658256d600cad0827d719c2f35" },
+  { "file": "mingw-w64-x86_64-libgcc-16.2.0-5-any.pkg.tar.zst", "sha256": "6cc48c5efe5ebab70a1ee1f6806c422205d5515c0f50d7a0e6a67336268c2afe" },
+  { "file": "mingw-w64-x86_64-libstdc++-16.2.0-5-any.pkg.tar.zst", "sha256": "2ec9a91ce896249b1a440a44e1bc0126f82efb540955827adec30e83a9bfb1f6" },
+  { "file": "mingw-w64-x86_64-tzdata-2026e-1-any.pkg.tar.zst", "sha256": "6d28805f8fb6517011cc309aa452111565afa1bc9188ad784cb5f62df98f0988" }
+]

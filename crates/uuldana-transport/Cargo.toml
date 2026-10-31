@@ -1,0 +1,25 @@
+[package]
+name = "uuldana-transport"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Native PTY and subprocess transports for Uuldana"
+
+[dependencies]
+uuldana-core.workspace = true
+portable-pty = "0.9.0"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
+[target.'cfg(windows)'.dependencies]
+subc-jobobject = "0.2.1"
+
+[target.'cfg(unix)'.dependencies]
+rustix = { version = "1", features = ["process"] }
+
+[dev-dependencies]
+crossterm = "0.29"
+# Test seam only (never in a normal build): makes the CTRL+C release fail for real.
+portable-pty = { version = "0.9.0", features = ["uuldana-test-hooks"] }
+
+[lints]
+workspace = true
