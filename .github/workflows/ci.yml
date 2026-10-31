@@ -25,7 +25,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install explicit host toolchain
         run: rustup toolchain install ${{ matrix.toolchain }} --profile minimal --component rustfmt --component clippy --no-self-update
       - name: Select stable toolchain
@@ -85,7 +85,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install cargo-audit
         run: cargo install cargo-audit --locked
       - name: Check Cargo.lock against the RustSec database
