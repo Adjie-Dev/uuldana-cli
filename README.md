@@ -98,6 +98,10 @@ Windows 11 (GNU and MSVC toolchains) is where Uuldana is developed and tested. L
 - [Protocol and platform notes](docs/PROTOCOL_COMPATIBILITY.md)
 - [Contributing](CONTRIBUTING.md), [security policy](SECURITY.md), [releasing](docs/RELEASING.md)
 
+## Contact
+
+Instagram: [instagram.com/balindrakumara](https://www.instagram.com/balindrakumara)
+
 ## License
 
 Licensed under the [MIT License](LICENSE-MIT). Copyright (c) 2026 Ang Hae Jhie (Anicca Code). The licenses of the libraries that are built into the binary are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

@@ -11,7 +11,10 @@ fn redirected_version_preserves_output_and_exit_status() {
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(
         String::from_utf8(output.stdout).unwrap(),
-        "uuldana 0.1.0 (provider contract 0.2)\n"
+        format!(
+            "uuldana {} (provider contract 0.2)\n",
+            env!("CARGO_PKG_VERSION")
+        )
     );
     assert!(output.stderr.is_empty());
 }

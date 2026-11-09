@@ -107,12 +107,61 @@ impl HostProbe for LocalHost {
         Platform::current()
     }
 }
+/// A probed program may write files into its working folder (some leave a log
+/// there). That folder is an empty one of its own, never the user's project,
+/// and it is removed afterwards with whatever the program put in it.
 async fn run_probe(
     program: PathBuf,
     args: Vec<OsString>,
     deadline: Instant,
 ) -> Result<ProbeOutput, ProbeError> {
-    let cwd = std::env::current_dir().map_err(probe_io)?;
+    let cwd = create_probe_dir().map_err(probe_io)?;
+    let result = run_probe_in(&cwd, program, args, deadline).await;
+    let _ = std::fs::remove_dir_all(&cwd);
+    result
+}
+
+/// Makes a new folder with an unpredictable name. It is created in one step
+/// that fails when the name is taken (never reusing a folder someone else made
+/// first), and on Unix readable by its owner only.
+fn create_probe_dir() -> std::io::Result<PathBuf> {
+    use std::hash::{BuildHasher, Hasher};
+    let mut last = None;
+    for _ in 0..16 {
+        // Every `RandomState` is seeded randomly by the operating system.
+        let mut hasher = std::collections::hash_map::RandomState::new().build_hasher();
+        hasher.write_u32(std::process::id());
+        let path = std::env::temp_dir().join(format!("uuldana-probe-{:016x}", hasher.finish()));
+        let builder = private_dir_builder();
+        match builder.create(&path) {
+            Ok(()) => return Ok(path),
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => last = Some(error),
+            Err(error) => return Err(error),
+        }
+    }
+    Err(last.unwrap_or_else(|| std::io::Error::other("no free probe folder name")))
+}
+
+#[cfg(unix)]
+fn private_dir_builder() -> std::fs::DirBuilder {
+    use std::os::unix::fs::DirBuilderExt;
+    let mut builder = std::fs::DirBuilder::new();
+    builder.mode(0o700);
+    builder
+}
+
+#[cfg(not(unix))]
+fn private_dir_builder() -> std::fs::DirBuilder {
+    std::fs::DirBuilder::new()
+}
+
+async fn run_probe_in(
+    cwd: &Path,
+    program: PathBuf,
+    args: Vec<OsString>,
+    deadline: Instant,
+) -> Result<ProbeOutput, ProbeError> {
+    let cwd = cwd.to_path_buf();
     let policy = PermissionPolicy::default();
     let permissions = validate_mapping(&policy, &PermissionMapping::new(policy))
         .map_err(|e| ProbeError::Denied(e.to_string()))?;
@@ -377,6 +426,37 @@ mod tests {
                 assert!(!seen.contains(&needle), "{name:?} reached the probe");
             }
         }
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn a_probed_program_runs_in_a_folder_of_its_own_that_is_removed_afterwards() {
+        let cmd = PathBuf::from(std::env::var_os("SystemRoot").unwrap())
+            .join("System32")
+            .join("cmd.exe");
+        let mine = std::env::current_dir().unwrap();
+        let host = LocalHost::new();
+        let output = host
+            .run(&cmd, &["/d", "/c", "cd"], Duration::from_secs(10))
+            .unwrap();
+        let probe_dir = PathBuf::from(String::from_utf8_lossy(&output.stdout).trim());
+        assert_ne!(probe_dir, mine);
+        assert!(probe_dir.starts_with(std::env::temp_dir()), "{probe_dir:?}");
+        assert!(!probe_dir.exists(), "{probe_dir:?} was left behind");
+
+        // A program that leaves a file in its working folder leaves it there,
+        // not in the folder `uuldana` was started in.
+        let note = mine.join("probe-note.txt");
+        let _ = std::fs::remove_file(&note);
+        host.run(
+            &cmd,
+            &["/d", "/c", "echo", "x>probe-note.txt"],
+            Duration::from_secs(10),
+        )
+        .unwrap();
+        let leaked = note.exists();
+        let _ = std::fs::remove_file(&note);
+        assert!(!leaked, "the probe wrote into the caller's folder");
     }
 
     #[test]

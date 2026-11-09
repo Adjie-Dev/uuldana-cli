@@ -1,0 +1,117 @@
+name: Publish to npm
+# Publishes the Windows x64 package `uuldana-cli` to npm when a tag `vX.Y.Z` is
+# pushed. Login is npm Trusted Publishing (OpenID Connect): no token is stored.
+# One-time setup on npmjs.com is described in docs/RELEASING.md.
+#
+# A manual run is a dry run by default: it builds and packs everything and runs
+# `npm publish --dry-run`, and publishes nothing.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Build and pack only; do not publish'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: Build and publish (windows x64)
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read the version
+        id: version
+        shell: pwsh
+        run: |
+          $version = (Select-String -Path Cargo.toml -Pattern '^version = "(.+)"' |
+              Select-Object -First 1).Matches[0].Groups[1].Value
+          if (-not $version) { throw 'could not read the version from Cargo.toml' }
+          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne "v$version") {
+              throw "tag $env:GITHUB_REF_NAME does not match Cargo.toml version $version"
+          }
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Stop if this version is already on npm
+        shell: pwsh
+        run: |
+          $found = npm view "uuldana-cli@${{ steps.version.outputs.version }}" version 2>$null
+          if ($found) { throw "uuldana-cli@${{ steps.version.outputs.version }} is already published; raise the version" }
+          $global:LASTEXITCODE = 0
+
+      - name: Install toolchain
+        run: |
+          rustup toolchain install stable-x86_64-pc-windows-msvc --profile minimal --component rustfmt --component clippy --no-self-update
+          rustup default stable-x86_64-pc-windows-msvc
+
+      - name: Build Windows test process helper
+        shell: pwsh
+        run: |
+          ./scripts/prepare-test-helper.ps1
+          "UULDANA_TEST_PROCINFO=$env:UULDANA_TEST_PROCINFO" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Test
+        run: cargo test --workspace --locked
+
+      - name: Build the release binary
+        shell: pwsh
+        run: |
+          . ./scripts/release-env.ps1
+          cargo build --release -p uuldana-cli --locked
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Pack the npm package
+        shell: pwsh
+        run: ./packaging/npm/build.ps1
+
+      - name: Smoke test the packed package in a clean folder
+        shell: pwsh
+        run: |
+          $tgz = (Get-ChildItem target/npm -Filter *.tgz | Select-Object -First 1).FullName
+          $dir = Join-Path $env:RUNNER_TEMP 'npm-smoke'
+          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          Push-Location $dir
+          npm init -y | Out-Null
+          npm install $tgz --no-audit --no-fund
+          if ($LASTEXITCODE -ne 0) { throw 'npm install of the packed package failed' }
+          $out = & (Join-Path $dir 'node_modules/.bin/uuldana.cmd') --version
+          Pop-Location
+          Write-Host $out
+          if ($out -notmatch [regex]::Escape("uuldana ${{ steps.version.outputs.version }} ")) {
+              throw "unexpected version output: $out"
+          }
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Publish
+        shell: pwsh
+        run: |
+          $tgz = (Get-ChildItem target/npm -Filter *.tgz | Select-Object -First 1).FullName
+          $dry = ('${{ github.event_name }}' -eq 'workflow_dispatch') -and ('${{ inputs.dry_run }}' -ne 'false')
+          if ($dry) {
+              npm publish $tgz --access public --dry-run
+          } else {
+              npm publish $tgz --access public
+          }
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: uuldana-cli-npm-package
+          path: target/npm/*.tgz
+          if-no-files-found: error

@@ -540,7 +540,7 @@ checksum = "b4ac048d71ede7ee76d585517add45da530660ef4390e49b098733c6e897f254"
 
 [[package]]
 name = "uuldana-cli"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "clipboard-win",
  "crossterm",
@@ -555,18 +555,18 @@ dependencies = [
 
 [[package]]
 name = "uuldana-core"
-version = "0.1.0"
+version = "0.1.1"
 
 [[package]]
 name = "uuldana-provider-sdk"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "uuldana-core",
 ]
 
 [[package]]
 name = "uuldana-providers"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "serde_json",
  "uuldana-provider-sdk",
@@ -575,7 +575,7 @@ dependencies = [
 
 [[package]]
 name = "uuldana-runtime"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "rustix",
  "serde_json",
@@ -588,7 +588,7 @@ dependencies = [
 
 [[package]]
 name = "uuldana-transport"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "crossterm",
  "portable-pty",

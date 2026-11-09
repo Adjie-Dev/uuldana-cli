@@ -20,7 +20,7 @@ use std::{
 
 use uuldana_core::TerminalSize;
 
-use crate::banner::{HINT, SUBTITLE, TITLE};
+use crate::banner::{EARLY, HINT, SUBTITLE, TITLE};
 
 /// Rows of history the in-memory terminal keeps for the agent.
 const HISTORY_ROWS: usize = 10_000;
@@ -486,7 +486,8 @@ impl State {
             0 => Vec::new(),
             1 => {
                 let text = format!(
-                    " UULDANA  {}{}{}",
+                    " UULDANA  {}  {}{}{}",
+                    EARLY.to_lowercase(),
                     if self.agent.is_empty() {
                         String::new()
                     } else {
@@ -507,7 +508,11 @@ impl State {
                     let color = self.sgr(if index < 2 { DIM_GREY } else { "31" });
                     lines.push(format!("{color}{}{reset}", fit(row, cols)));
                 }
-                lines.push(format!("{}{SUBTITLE}{reset}{agent}{badge}", self.sgr("36")));
+                lines.push(format!(
+                    "{}{SUBTITLE}{reset}  {}{EARLY}{reset}{agent}{badge}",
+                    self.sgr("36"),
+                    self.sgr("33")
+                ));
                 lines.push(format!(
                     "{}{}{reset}",
                     self.sgr(GREY),
@@ -725,6 +730,11 @@ mod tests {
         assert!(rows.iter().skip(9).all(|row| row.is_empty()), "{rows:?}");
         assert_eq!(frame.cursor(), (1, 1));
         assert!(screen.row(6).contains("now: agent-a"));
+        assert!(
+            screen.row(6).contains("EARLY ACCESS"),
+            "{:?}",
+            screen.row(6)
+        );
         // The new agent draws as it would on a fresh terminal.
         agent_writes(&frame, "agent-a screen");
         assert_eq!(screen.row(9), "agent-a screen");

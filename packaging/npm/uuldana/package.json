@@ -1,15 +1,22 @@
 {
-  "name": "uuldana",
-  "version": "0.1.0",
+  "name": "uuldana-cli",
+  "version": "0.1.1",
   "description": "A native AI coding agent supervisor with automatic failover, context handoff, and unified session history.",
   "license": "MIT",
   "author": "Ang Hae Jhie (Anicca Code)",
-  "bugs": { "email": "aniccacodestudio@gmail.com" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Adjie-Dev/uuldana-cli.git"
+  },
+  "homepage": "https://github.com/Adjie-Dev/uuldana-cli#readme",
+  "bugs": {
+    "url": "https://github.com/Adjie-Dev/uuldana-cli/issues",
+    "email": "aniccacodestudio@gmail.com"
+  },
   "bin": { "uuldana": "bin/uuldana.js" },
   "files": ["bin", "README.md", "LICENSE-MIT", "THIRD_PARTY_NOTICES.md"],
   "engines": { "node": ">=18" },
-  "keywords": ["cli", "agent", "supervisor", "pty", "failover"],
-  "optionalDependencies": {
-    "@uuldana/win32-x64": "0.1.0"
-  }
+  "os": ["win32"],
+  "cpu": ["x64"],
+  "keywords": ["cli", "agent", "supervisor", "pty", "failover"]
 }

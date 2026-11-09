@@ -35,8 +35,22 @@ Pass a target triple as the first argument to cross-compile. Without one the bui
 
 The `Release archives` workflow runs the same scripts on Linux, macOS and Windows for a manual run or a `v*` tag, smoke-tests the packaged binary with `--version`, and keeps the archives as workflow artifacts. It never creates a release or uploads elsewhere.
 
-## Publishing
+## Publishing to npm
 
-Before the repository is made public: it needs a Git history, `repository` and `homepage` in `Cargo.toml` and `packaging/npm/uuldana/package.json`, and a contact in [SECURITY.md](../SECURITY.md) that is not one person's mailbox if the project grows past one maintainer. Release binaries are not code signed; say so in the notes until they are.
+The Windows x64 package `uuldana-cli` is published by the `Publish to npm` workflow (`.github/workflows/release-npm.yml`) when a tag `vX.Y.Z` is pushed. It checks that the tag matches the version in `Cargo.toml`, stops if that version is already on npm, runs format, clippy and the tests, builds the binary with the path remapping of `scripts/release-env.ps1`, packs it with `packaging/npm/build.ps1`, installs the pack in a clean folder and checks `uuldana --version`, and then runs `npm publish`.
 
-Publishing (a GitHub release, a package registry, a download page) is not automated. The crates carry `publish = false`; remove that only for the crates that are meant to be published, and only after the public contact in [SECURITY.md](../SECURITY.md) exists. Attach the archives and their `.sha256` files, and state in the notes which platforms and providers were verified and which were not.
+Login is npm Trusted Publishing, so no token is stored in the repository. Set it up once on npmjs.com: package `uuldana-cli`, Settings, Trusted Publisher, GitHub Actions, owner `Adjie-Dev`, repository `uuldana-cli`, workflow `release-npm.yml`. Without it the publish step is refused.
+
+To release:
+
+1. Raise `version` in `Cargo.toml` (and the two `version` entries under `[workspace.dependencies]`), run `cargo check --workspace` so `Cargo.lock` follows, and commit.
+2. Run the workflow once by hand (Actions, `Publish to npm`, Run workflow). It is a dry run by default and publishes nothing.
+3. Push the tag: `git tag vX.Y.Z` and `git push origin vX.Y.Z`.
+
+npm refuses a version that was published before, so every release needs a new version.
+
+## Other publishing
+
+Before the repository is made public it needs a contact in [SECURITY.md](../SECURITY.md) that is not one person's mailbox if the project grows past one maintainer. Release binaries are not code signed; say so in the notes until they are.
+
+A GitHub release or a download page is not automated. The crates carry `publish = false`; remove that only for the crates that are meant to be published. Attach the archives and their `.sha256` files, and state in the notes which platforms and providers were verified and which were not.

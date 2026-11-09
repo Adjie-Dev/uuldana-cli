@@ -1,14 +1,16 @@
 <#
 .SYNOPSIS
-  Packs the npm packages for the current Windows x64 release binary into
-  target\npm as .tgz files.
+  Packs the npm package for the current Windows x64 release binary into
+  target\npm as a .tgz file.
 
 .DESCRIPTION
   Builds nothing and publishes nothing. Run scripts\package-release.ps1 or
-  `. .\scripts\release-env.ps1; cargo build --release -p uuldana-cli` first. The two tarballs are installed
-  together with:
+  `. .\scripts\release-env.ps1; cargo build --release -p uuldana-cli --locked`
+  first. The tarball is installed with:
 
-    npm install -g target\npm\uuldana-win32-x64-<version>.tgz target\npm\uuldana-<version>.tgz
+    npm install -g target\npm\uuldana-cli-<version>.tgz
+
+  The command it installs is `uuldana`.
 #>
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
@@ -33,39 +35,19 @@ function Write-Json($value, $path) {
     [IO.File]::WriteAllText($path, ($value | ConvertTo-Json -Depth 5), (New-Object Text.UTF8Encoding($false)))
 }
 
-# Platform package: the binary and nothing else.
-$platform = Join-Path $out 'uuldana-win32-x64'
-New-Item -ItemType Directory -Force -Path (Join-Path $platform 'bin') | Out-Null
-Copy-Item $binary (Join-Path $platform 'bin\uuldana.exe')
-foreach ($file in $licenses) { Copy-Item (Join-Path $root $file) $platform }
-$manifest = [ordered]@{
-    name        = '@uuldana/win32-x64'
-    version     = $version
-    description = 'The uuldana binary for Windows x64.'
-    license     = 'MIT'
-    author      = 'Ang Hae Jhie (Anicca Code)'
-    bugs        = [ordered]@{ email = 'aniccacodestudio@gmail.com' }
-    os          = @('win32')
-    cpu         = @('x64')
-    files       = @('bin', 'LICENSE-MIT', 'THIRD_PARTY_NOTICES.md')
-}
-Write-Json $manifest (Join-Path $platform 'package.json')
-
-# Main package: the shim, with the version taken from Cargo.toml.
-$main = Join-Path $out 'uuldana'
+# One package: the shim and the binary next to it, version from Cargo.toml.
+$main = Join-Path $out 'uuldana-cli'
 Copy-Item -Recurse (Join-Path $PSScriptRoot 'uuldana') $main
+Copy-Item $binary (Join-Path $main 'bin\uuldana.exe')
 foreach ($file in $licenses) { Copy-Item (Join-Path $root $file) $main }
 $package = Get-Content -Raw (Join-Path $main 'package.json') | ConvertFrom-Json
 $package.version = $version
-$package.optionalDependencies.'@uuldana/win32-x64' = $version
 Write-Json $package (Join-Path $main 'package.json')
 
-foreach ($dir in $platform, $main) {
-    Push-Location $dir
-    try {
-        npm pack --pack-destination $out --silent
-        if ($LASTEXITCODE -ne 0) { throw "npm pack failed in $dir" }
-    } finally { Pop-Location }
-}
+Push-Location $main
+try {
+    npm pack --pack-destination $out --silent
+    if ($LASTEXITCODE -ne 0) { throw "npm pack failed in $main" }
+} finally { Pop-Location }
 
 Get-ChildItem $out -Filter *.tgz | ForEach-Object { Write-Host $_.FullName }

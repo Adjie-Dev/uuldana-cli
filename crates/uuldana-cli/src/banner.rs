@@ -9,6 +9,8 @@ pub(crate) const TITLE: [&str; 6] = [
     " ╚═════╝  ╚═════╝ ╚══════╝╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝",
 ];
 pub(crate) const SUBTITLE: &str = "ONE TERMINAL. MULTIPLE AGENTS.";
+/// Shown in the header for as long as the releases are early ones.
+pub(crate) const EARLY: &str = "EARLY ACCESS";
 pub(crate) const HINT: &str = "Type /agent and press Enter to choose which agent works first.";
 
 #[cfg(test)]

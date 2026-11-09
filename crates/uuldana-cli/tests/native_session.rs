@@ -209,7 +209,14 @@ async fn every_agent_opens_without_any_setup_and_exits_on_ctrl_c() {
             continue;
         }
         eprintln!("opening {}", agent.id);
-        run_agent(agent, None, &[], Ending::CtrlC, |_, _| {}).await;
+        run_agent(agent, None, &[], Ending::CtrlC, |screen, _| {
+            assert!(
+                screen.contains("EARLY ACCESS"),
+                "{}: the header does not say early access",
+                agent.id
+            );
+        })
+        .await;
     }
 }
 
@@ -231,12 +238,21 @@ async fn bypass_permissions_flags_reach_every_agent() {
             Some(strict),
             &["--bypass-permissions"],
             Ending::Terminate,
-            |_, pid| {
-                let lines = child_command_lines(pid).join("\n");
+            |screen, pid| {
+                // The agent can be spawned a moment after the first screen
+                // settles, so give the process list time to show it.
+                let mut lines = String::new();
+                for _ in 0..40 {
+                    lines = child_command_lines(pid).join("\n");
+                    if !lines.trim().is_empty() {
+                        break;
+                    }
+                    std::thread::sleep(Duration::from_millis(500));
+                }
                 for arg in &expected {
                     assert!(
                         lines.contains(arg.as_str()),
-                        "{} was not started with {arg}: {lines}",
+                        "{} was not started with {arg}: {lines}\nscreen:\n{screen}",
                         agent.id
                     );
                 }
