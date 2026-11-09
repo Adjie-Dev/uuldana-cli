@@ -2,12 +2,22 @@
 
 use std::process::Command;
 
+/// The `uuldana` binary. On a build server the search path is an empty folder:
+/// that machine has no agent, and `uuldana providers` would otherwise ask every
+/// program on its search path for `--help`, which takes minutes.
+fn uuldana() -> Command {
+    let mut command = Command::new(env!("CARGO_BIN_EXE_uuldana"));
+    if std::env::var_os("CI").is_some() {
+        let empty = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("empty-search-path");
+        std::fs::create_dir_all(&empty).unwrap();
+        command.env("PATH", empty);
+    }
+    command
+}
+
 #[test]
 fn redirected_version_preserves_output_and_exit_status() {
-    let output = Command::new(env!("CARGO_BIN_EXE_uuldana"))
-        .arg("--version")
-        .output()
-        .expect("run CLI");
+    let output = uuldana().arg("--version").output().expect("run CLI");
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(
         String::from_utf8(output.stdout).unwrap(),
@@ -22,7 +32,7 @@ fn redirected_version_preserves_output_and_exit_status() {
 #[test]
 fn providers_lists_what_was_found_in_the_order_of_its_ids_without_decoration() {
     let data = std::env::temp_dir().join(format!("uuldana-providers-data-{}", std::process::id()));
-    let output = Command::new(env!("CARGO_BIN_EXE_uuldana"))
+    let output = uuldana()
         .arg("providers")
         .env("UULDANA_DATA", &data)
         .output()
@@ -52,7 +62,7 @@ fn providers_lists_what_was_found_in_the_order_of_its_ids_without_decoration() {
 #[test]
 fn start_without_configuration_still_starts_and_is_stopped_only_by_the_terminal() {
     let missing = std::env::temp_dir().join(format!("uuldana-no-config-{}", std::process::id()));
-    let output = Command::new(env!("CARGO_BIN_EXE_uuldana"))
+    let output = uuldana()
         .env("UULDANA_CONFIG", &missing)
         .output()
         .expect("run CLI");
@@ -70,7 +80,7 @@ fn start_without_configuration_still_starts_and_is_stopped_only_by_the_terminal(
 fn resume_follows_the_same_rules_as_start() {
     let missing =
         std::env::temp_dir().join(format!("uuldana-resume-config-{}", std::process::id()));
-    let output = Command::new(env!("CARGO_BIN_EXE_uuldana"))
+    let output = uuldana()
         .arg("resume")
         .env("UULDANA_CONFIG", &missing)
         .output()
@@ -83,7 +93,7 @@ fn resume_follows_the_same_rules_as_start() {
 
     let path = std::env::temp_dir().join(format!("uuldana-resume-{}.json", std::process::id()));
     std::fs::write(&path, r#"{"version":1,"providers":[{"id":"agent-b"}]}"#).unwrap();
-    let output = Command::new(env!("CARGO_BIN_EXE_uuldana"))
+    let output = uuldana()
         .arg("resume")
         .env("UULDANA_CONFIG", &path)
         .output()
@@ -100,7 +110,7 @@ fn resume_follows_the_same_rules_as_start() {
 fn start_needs_an_interactive_terminal() {
     let path = std::env::temp_dir().join(format!("uuldana-config-{}.json", std::process::id()));
     std::fs::write(&path, r#"{"version":1,"providers":[{"id":"agent-b"}]}"#).unwrap();
-    let output = Command::new(env!("CARGO_BIN_EXE_uuldana"))
+    let output = uuldana()
         .env("UULDANA_CONFIG", &path)
         .output()
         .expect("run CLI");
@@ -116,7 +126,7 @@ fn start_needs_an_interactive_terminal() {
 fn start_rejects_an_invalid_configuration_precisely() {
     let path = std::env::temp_dir().join(format!("uuldana-bad-config-{}.json", std::process::id()));
     std::fs::write(&path, r#"{"version":1,"auto_detect":false,"providers":[]}"#).unwrap();
-    let output = Command::new(env!("CARGO_BIN_EXE_uuldana"))
+    let output = uuldana()
         .env("UULDANA_CONFIG", &path)
         .output()
         .expect("run CLI");
@@ -134,10 +144,7 @@ fn redirected_help_and_errors_have_no_decoration() {
         vec!["unknown"],
         vec!["providers", "--json"],
     ] {
-        let output = Command::new(env!("CARGO_BIN_EXE_uuldana"))
-            .args(&args)
-            .output()
-            .expect("run CLI");
+        let output = uuldana().args(&args).output().expect("run CLI");
         assert_eq!(
             output.status.code(),
             Some(if args[0] == "--help" || args[0] == "help" {
@@ -166,7 +173,7 @@ fn a_provider_manifest_next_to_the_configuration_appears_in_the_listing() {
     )
     .unwrap();
     std::fs::write(dir.join("adapters").join("broken.json"), "{").unwrap();
-    let output = Command::new(env!("CARGO_BIN_EXE_uuldana"))
+    let output = uuldana()
         .arg("providers")
         .env("UULDANA_CONFIG", dir.join("config.json"))
         .env("UULDANA_DATA", dir.join("data"))

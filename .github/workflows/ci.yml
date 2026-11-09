@@ -49,8 +49,10 @@ jobs:
       - name: Clippy
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - name: Test
+        timeout-minutes: 8
         run: cargo test --workspace --locked
       - name: Test all targets including keyboard encoding
+        timeout-minutes: 8
         run: cargo test --workspace --all-targets --locked
       - name: Check
         run: cargo check --workspace --locked

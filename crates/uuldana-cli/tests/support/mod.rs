@@ -23,10 +23,20 @@ pub struct Agent {
     pub adapter: Arc<dyn ProviderAdapter>,
 }
 
+/// Whether the tests run on a build server. Such a machine has no agent to
+/// find, and asking every program on its search path for `--help` takes
+/// minutes, so nothing on it is asked.
+pub fn on_build_server() -> bool {
+    std::env::var_os("CI").is_some()
+}
+
 /// Every agent learned on this machine, asked for once per test binary.
 pub fn agents() -> &'static [Agent] {
     static AGENTS: OnceLock<Vec<Agent>> = OnceLock::new();
     AGENTS.get_or_init(|| {
+        if on_build_server() {
+            return Vec::new();
+        }
         let cache = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("programs.json");
         uuldana_providers::learn_installed(&LocalHost::new(), Some(&cache), &|asked| {
             eprintln!("asking {asked} programs for their help");
@@ -119,6 +129,7 @@ impl Drop for Scratch {
 }
 
 /// Command lines of the processes started by `parent`.
+#[cfg(windows)]
 pub fn child_command_lines(parent: u32) -> Vec<String> {
     let query = format!(
         "Get-CimInstance Win32_Process | Where-Object {{ $_.ParentProcessId -eq {parent} }} | ForEach-Object {{ $_.CommandLine }}"
@@ -130,5 +141,21 @@ pub fn child_command_lines(parent: u32) -> Vec<String> {
     String::from_utf8_lossy(&out.stdout)
         .lines()
         .map(str::to_owned)
+        .collect()
+}
+
+/// Command lines of the processes started by `parent`.
+#[cfg(not(windows))]
+pub fn child_command_lines(parent: u32) -> Vec<String> {
+    let out = std::process::Command::new("ps")
+        .args(["-axo", "ppid=,command="])
+        .output()
+        .expect("ps runs");
+    String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .filter_map(|line| {
+            let (ppid, command) = line.trim_start().split_once(char::is_whitespace)?;
+            (ppid.parse::<u32>().ok()? == parent).then(|| command.trim().to_owned())
+        })
         .collect()
 }
