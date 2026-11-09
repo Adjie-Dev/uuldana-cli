@@ -104,6 +104,25 @@ jobs:
           node-version: 24
           registry-url: 'https://registry.npmjs.org'
 
+      # npm answers a refused trusted publish with a bare 404. This asks the same
+      # question first and prints npm's own reason (for example, that no trusted
+      # publisher matches this repository and workflow). It prints no token, and
+      # it never blocks the release: the Publish step decides.
+      - name: Ask npm whether it trusts this workflow
+        if: ${{ github.event_name == 'push' }}
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $request = "$($env:ACTIONS_ID_TOKEN_REQUEST_URL)&audience=npm:registry.npmjs.org"
+          $identity = (Invoke-RestMethod -Uri $request -Headers @{ Authorization = "Bearer $($env:ACTIONS_ID_TOKEN_REQUEST_TOKEN)" }).value
+          try {
+              Invoke-RestMethod -Method Post -Uri 'https://registry.npmjs.org/-/npm/v1/oidc/token/exchange/package/uuldana-cli' -Headers @{ Authorization = "Bearer $identity" } | Out-Null
+              Write-Host 'npm accepted the identity of this workflow.'
+          } catch {
+              Write-Host "npm refused the identity of this workflow: $($_.ErrorDetails.Message)"
+              throw
+          }
+
       - name: Publish
         shell: pwsh
         env:
