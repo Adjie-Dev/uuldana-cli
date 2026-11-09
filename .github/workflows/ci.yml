@@ -87,7 +87,40 @@ jobs:
           CARGO_TARGET_DIR: ${{ github.workspace }}/target/portable-pty
         run: cargo test --manifest-path vendor/portable-pty/Cargo.toml --lib --locked
       - name: Repeated stress tests with external process watchdogs
-        run: python scripts/stress.py --parallel-runs 4 --sequential-runs 3 --deadline 60
+        shell: bash
+        run: |
+          set -o pipefail
+          python scripts/stress.py --parallel-runs 4 --sequential-runs 3 --deadline 60 2>&1 | tee "$RUNNER_TEMP/stress.log"
+      - name: Name the failing stress run
+        if: failure()
+        shell: bash
+        run: |
+          # The raw log needs a login to read; annotations are public.
+          python - <<'EOF'
+          import glob, json, os, re
+          runs = sorted(glob.glob('target/verification/stress/*/results.jsonl'), key=os.path.getmtime)
+          out = []
+          if runs:
+              for raw in open(runs[-1]):
+                  r = json.loads(raw)
+                  if r['passed']:
+                      continue
+                  out.append(f"FAIL {r['stage']} {r['target']} run {r['run']} code={r['exit_code']} timeout={r['timed_out']} {r['seconds']}s")
+                  for suffix in ('.stdout.log', '.stderr.log'):
+                      try:
+                          lines = open(r['log'] + suffix, errors='replace').read().splitlines()
+                      except OSError:
+                          continue
+                      for i, line in enumerate(lines):
+                          if re.search(r'\.\.\. FAILED|panicked at|has been running for over|^error|watchdog', line):
+                              out.append(line.strip())
+                              if 'panicked at' in line and i + 1 < len(lines):
+                                  out.append(lines[i + 1].strip())
+                  break
+          chunks = [text[i:i + 100] for text in out for i in range(0, max(len(text), 1), 100)]
+          for chunk in chunks[:10]:
+              print('::error::' + chunk.replace('%', '%25'))
+          EOF
       - name: Native Windows Job completion observer
         if: runner.os == 'Windows'
         env:
