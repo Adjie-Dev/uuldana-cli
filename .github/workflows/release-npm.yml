@@ -1,14 +1,19 @@
 name: Publish to npm
-# Publishes the Windows x64 package `uuldana-cli` to npm when a tag `vX.Y.Z` is
-# pushed. Login is npm Trusted Publishing (OpenID Connect): no token is stored.
-# One-time setup on npmjs.com is described in docs/RELEASING.md.
+# Publishes the Windows x64 package `uuldana-cli` to npm. Every push to main
+# runs the first job, which reads the version in Cargo.toml and asks npm whether
+# that version is already published. If it is, nothing else happens. If it is
+# not, the second job builds, tests, packs and publishes it. So a release is: raise
+# the version, push. Pushing without raising the version publishes nothing,
+# because npm refuses a version that was published before.
+#
+# Login is npm Trusted Publishing (OpenID Connect): no token is stored. The
+# one-time setup on npmjs.com is described in docs/RELEASING.md.
 #
 # A manual run is a dry run by default: it builds and packs everything and runs
 # `npm publish --dry-run`, and publishes nothing.
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [main]
   workflow_dispatch:
     inputs:
       dry_run:
@@ -18,38 +23,65 @@ on:
 
 permissions:
   contents: read
-  id-token: write
+
+concurrency:
+  group: release-npm
+  cancel-in-progress: false
 
 jobs:
-  publish:
-    name: Build and publish (windows x64)
-    runs-on: windows-latest
-    timeout-minutes: 45
+  check:
+    name: Is this version already on npm
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.decide.outputs.version }}
+      publish: ${{ steps.decide.outputs.publish }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
 
-      - name: Read the version
-        id: version
-        shell: pwsh
-        run: |
-          $version = (Select-String -Path Cargo.toml -Pattern '^version = "(.+)"' |
-              Select-Object -First 1).Matches[0].Groups[1].Value
-          if (-not $version) { throw 'could not read the version from Cargo.toml' }
-          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne "v$version") {
-              throw "tag $env:GITHUB_REF_NAME does not match Cargo.toml version $version"
-          }
-          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-
-      - name: Stop if this version is already on npm
-        shell: pwsh
+      - name: Read the version and ask npm
+        id: decide
+        shell: bash
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
-          $found = npm view "uuldana-cli@$env:VERSION" version 2>$null
-          if ($found) { throw "uuldana-cli@$env:VERSION is already published; raise the version" }
-          $global:LASTEXITCODE = 0
+          version=$(grep -m1 '^version = "' Cargo.toml | sed -E 's/^version = "(.+)"/\1/')
+          if [ -z "$version" ]; then
+            echo "could not read the version from Cargo.toml"
+            exit 1
+          fi
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            publish=true
+          elif npm view "uuldana-cli@${version}" version > /dev/null 2>&1; then
+            publish=false
+          else
+            publish=true
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "publish=${publish}" >> "$GITHUB_OUTPUT"
+          if [ "$publish" = "true" ]; then
+            echo "uuldana-cli@${version} is not on npm yet: building and publishing it." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "uuldana-cli@${version} is already on npm: nothing to publish. Raise the version in Cargo.toml to release." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  publish:
+    name: Build and publish (windows x64)
+    needs: check
+    if: ${{ needs.check.outputs.publish == 'true' }}
+    runs-on: windows-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      VERSION: ${{ needs.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
       - name: Install toolchain
         run: |
@@ -82,8 +114,6 @@ jobs:
 
       - name: Smoke test the packed package in a clean folder
         shell: pwsh
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
         run: |
           $tgz = (Get-ChildItem target/npm -Filter *.tgz | Select-Object -First 1).FullName
           $dir = Join-Path $env:RUNNER_TEMP 'npm-smoke'

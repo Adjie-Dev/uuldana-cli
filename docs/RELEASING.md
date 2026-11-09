@@ -37,17 +37,16 @@ The `Release archives` workflow runs the same scripts on Linux, macOS and Window
 
 ## Publishing to npm
 
-The Windows x64 package `uuldana-cli` is published by the `Publish to npm` workflow (`.github/workflows/release-npm.yml`) when a tag `vX.Y.Z` is pushed. It checks that the tag matches the version in `Cargo.toml`, stops if that version is already on npm, runs format, clippy and the tests, builds the binary with the path remapping of `scripts/release-env.ps1`, packs it with `packaging/npm/build.ps1`, installs the pack in a clean folder and checks `uuldana --version`, and then runs `npm publish`.
+The Windows x64 package `uuldana-cli` is published by the `Publish to npm` workflow (`.github/workflows/release-npm.yml`). Every push to `main` runs a short first job that reads the version in `Cargo.toml` and asks npm whether that version is already published. If it is, nothing else happens. If it is not, a second job runs format, clippy and the tests, builds the binary with the path remapping of `scripts/release-env.ps1`, packs it with `packaging/npm/build.ps1`, installs the pack in a clean folder and checks `uuldana --version`, and then runs `npm publish`. Before it publishes, the job also asks npm whether it trusts the workflow and prints npm's own reason if it does not.
 
 Login is npm Trusted Publishing, so no token is stored in the repository. Set it up once on npmjs.com: package `uuldana-cli`, Settings, Trusted Publisher, GitHub Actions, owner `Adjie-Dev`, repository `uuldana-cli`, workflow `release-npm.yml`. Without it the publish step is refused.
 
 To release:
 
 1. Raise `version` in `Cargo.toml` (and the two `version` entries under `[workspace.dependencies]`), run `cargo check --workspace` so `Cargo.lock` follows, and commit.
-2. Run the workflow once by hand (Actions, `Publish to npm`, Run workflow). It is a dry run by default and publishes nothing.
-3. Push the tag: `git tag vX.Y.Z` and `git push origin vX.Y.Z`.
+2. Push to `main`. The workflow publishes the new version by itself.
 
-npm refuses a version that was published before, so every release needs a new version.
+npm refuses a version that was published before, so a push that does not raise the version publishes nothing, and the workflow says so in its summary. Every change that should reach npm, including a README change, needs a new version. A manual run (Actions, `Publish to npm`, Run workflow) is a dry run by default: it builds and packs everything and publishes nothing.
 
 ## Other publishing
 
