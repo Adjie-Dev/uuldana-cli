@@ -53,13 +53,13 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          cargo test --workspace --locked 2>&1 | tee "$RUNNER_TEMP/test.log"
+          cargo test --workspace --locked --no-fail-fast 2>&1 | tee "$RUNNER_TEMP/test.log"
       - name: Test all targets including keyboard encoding
         timeout-minutes: 8
         shell: bash
         run: |
           set -o pipefail
-          cargo test --workspace --all-targets --locked 2>&1 | tee "$RUNNER_TEMP/test-all.log"
+          cargo test --workspace --all-targets --locked --no-fail-fast 2>&1 | tee "$RUNNER_TEMP/test-all.log"
       - name: Name the failing tests
         if: failure()
         shell: bash
@@ -67,7 +67,7 @@ jobs:
           # The raw log needs a login to read; annotations are public.
           for log in "$RUNNER_TEMP/test.log" "$RUNNER_TEMP/test-all.log"; do
             [ -f "$log" ] || continue
-            grep -E '^error(\[|:)|FAILED|panicked at|has been running for over|Running (unittests|tests)' "$log" | tail -n 10 | sed 's/%/%25/g' | cut -c1-300 | while IFS= read -r line; do
+            grep -E '^error(\[|:)|\.\.\. FAILED|^test result: FAILED|has been running for over|assertion .*failed|^  left:|^ right:' "$log" | head -n 10 | sed 's/%/%25/g' | cut -c1-300 | while IFS= read -r line; do
               echo "::error::$line"
             done
           done

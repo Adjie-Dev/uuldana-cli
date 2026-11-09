@@ -241,7 +241,27 @@ fn unix_program(path: &Path, metadata: &fs::Metadata) -> Option<PathBuf> {
         return None;
     }
     let head = read_head(path, 4)?;
-    (head.starts_with(b"\x7fELF") || head.starts_with(b"#!")).then(|| path.to_path_buf())
+    is_program_image(&head).then(|| path.to_path_buf())
+}
+
+/// Whether the first bytes of a file are those of a program the operating
+/// system can start: a Linux ELF image, a macOS Mach-O image (thin, either byte
+/// order, or a universal binary), or a script with a `#!` line.
+#[cfg_attr(not(unix), allow(dead_code))]
+fn is_program_image(head: &[u8]) -> bool {
+    const MAGICS: [&[u8]; 8] = [
+        b"\x7fELF",
+        b"#!",
+        // Mach-O, 32 and 64 bit, in both byte orders.
+        b"\xfe\xed\xfa\xce",
+        b"\xce\xfa\xed\xfe",
+        b"\xfe\xed\xfa\xcf",
+        b"\xcf\xfa\xed\xfe",
+        // Universal (fat) Mach-O.
+        b"\xca\xfe\xba\xbe",
+        b"\xca\xfe\xba\xbf",
+    ];
+    MAGICS.iter().any(|magic| head.starts_with(magic))
 }
 
 #[cfg(not(unix))]
@@ -270,6 +290,24 @@ mod tests {
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
+    }
+
+    #[test]
+    fn linux_and_macos_programs_and_scripts_are_recognised_by_their_first_bytes() {
+        for head in [
+            &b"\x7fELF"[..],
+            b"#!/bin/sh\n",
+            b"\xcf\xfa\xed\xfe",
+            b"\xce\xfa\xed\xfe",
+            b"\xfe\xed\xfa\xcf",
+            b"\xfe\xed\xfa\xce",
+            b"\xca\xfe\xba\xbe",
+        ] {
+            assert!(is_program_image(head), "{head:?}");
+        }
+        for head in [&b"MZ\x90\x00"[..], b"plain text", b"", b"\x7fEL"] {
+            assert!(!is_program_image(head), "{head:?}");
+        }
     }
 
     #[test]

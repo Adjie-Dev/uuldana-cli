@@ -142,6 +142,10 @@ async fn delayed_pipe_consumer_preserves_large_pre_exit_output() {
 async fn delayed_pty_consumer_preserves_large_pre_exit_output() {
     let (plan, request) = plan("burst-large", true);
     let mut process = Process::spawn(&plan, &request).await.unwrap();
+    // Only ConPTY asks the terminal for its cursor position at start. A Unix
+    // pseudo terminal never asks, and waiting for the question there would
+    // spin on a finished child without ever yielding to the timeout.
+    #[cfg(windows)]
     tokio::time::timeout(Duration::from_secs(10), async {
         let mut bytes = Vec::new();
         loop {
