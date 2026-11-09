@@ -22,6 +22,9 @@ pub fn process_running(pid: u32) -> bool {
     let pid_value = rustix::process::Pid::from_raw(pid as i32).expect("positive process ID");
     match rustix::process::test_kill_process(pid_value) {
         Err(rustix::io::Errno::SRCH) => false,
+        // macOS answers EPERM for a process that has exited and is not reaped
+        // yet; it still exists until its parent reaps it.
+        Err(rustix::io::Errno::PERM) => true,
         Err(error) => panic!("cannot observe process {pid}: {error}"),
         Ok(()) => {
             // A Linux zombie has exited but awaits its new parent's reap; our

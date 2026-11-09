@@ -126,6 +126,10 @@ impl Tree {
                 match rustix::process::kill_process_group(group, rustix::process::Signal::KILL) {
                     Ok(()) => {}
                     Err(rustix::io::Errno::SRCH) => {}
+                    // macOS refuses to signal a group whose leader has exited
+                    // but is not reaped yet, although it still signals the
+                    // other members. Linux accepts it. Nothing is left to do.
+                    Err(rustix::io::Errno::PERM) if leader_has_exited(group) => {}
                     Err(e) => return Err(e.into()),
                 }
                 return Ok(true);
@@ -161,6 +165,22 @@ impl Tree {
             return Ok(true);
         }
         Ok(false)
+    }
+}
+
+/// Whether the group leader has exited, without reaping it.
+#[cfg(unix)]
+fn leader_has_exited(leader: rustix::process::Pid) -> bool {
+    use rustix::process::{WaitId, WaitIdOptions, waitid};
+    loop {
+        match waitid(
+            WaitId::Pid(leader),
+            WaitIdOptions::EXITED | WaitIdOptions::NOWAIT | WaitIdOptions::NOHANG,
+        ) {
+            Ok(status) => return status.is_some(),
+            Err(rustix::io::Errno::INTR) => continue,
+            Err(_) => return false,
+        }
     }
 }
 

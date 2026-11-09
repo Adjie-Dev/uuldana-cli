@@ -67,7 +67,11 @@ jobs:
           # The raw log needs a login to read; annotations are public.
           for log in "$RUNNER_TEMP/test.log" "$RUNNER_TEMP/test-all.log"; do
             [ -f "$log" ] || continue
-            grep -E '^error(\[|:)|\.\.\. FAILED|^test result: FAILED|has been running for over|assertion .*failed|^  left:|^ right:' "$log" | head -n 10 | sed 's/%/%25/g' | cut -c1-300 | while IFS= read -r line; do
+            {
+              # Why the first failing tests failed: their captured output.
+              awk '/^---- .* stdout ----$/{n++; p=(n<=3)} p{print} /^$/{p=0}' "$log" | head -n 20
+              grep -E '\.\.\. FAILED|has been running for over' "$log" | sed 's/^test //' | sort -u
+            } | fold -w 110 | head -n 10 | sed 's/%/%25/g' | while IFS= read -r line; do
               echo "::error::$line"
             done
           done
