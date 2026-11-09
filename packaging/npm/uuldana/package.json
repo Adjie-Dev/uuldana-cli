@@ -8,7 +8,7 @@
     "type": "git",
     "url": "git+https://github.com/Adjie-Dev/uuldana-cli.git"
   },
-  "homepage": "https://github.com/Adjie-Dev/uuldana-cli#readme",
+  "homepage": "https://uuldana-cli.pages.dev",
   "bugs": {
     "url": "https://github.com/Adjie-Dev/uuldana-cli/issues",
     "email": "aniccacodestudio@gmail.com"
@@ -18,5 +18,19 @@
   "engines": { "node": ">=18" },
   "os": ["win32"],
   "cpu": ["x64"],
-  "keywords": ["cli", "agent", "supervisor", "pty", "failover"]
+  "keywords": [
+    "cli",
+    "ai",
+    "ai-agents",
+    "coding-agent",
+    "llm",
+    "terminal",
+    "supervisor",
+    "pty",
+    "failover",
+    "handoff",
+    "session",
+    "developer-tools",
+    "rust"
+  ]
 }
