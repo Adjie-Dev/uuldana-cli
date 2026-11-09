@@ -25,7 +25,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Install explicit host toolchain
         run: rustup toolchain install ${{ matrix.toolchain }} --profile minimal --component rustfmt --component clippy --no-self-update
       - name: Select stable toolchain
@@ -50,10 +50,27 @@ jobs:
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - name: Test
         timeout-minutes: 8
-        run: cargo test --workspace --locked
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --workspace --locked 2>&1 | tee "$RUNNER_TEMP/test.log"
       - name: Test all targets including keyboard encoding
         timeout-minutes: 8
-        run: cargo test --workspace --all-targets --locked
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --workspace --all-targets --locked 2>&1 | tee "$RUNNER_TEMP/test-all.log"
+      - name: Name the failing tests
+        if: failure()
+        shell: bash
+        run: |
+          # The raw log needs a login to read; annotations are public.
+          for log in "$RUNNER_TEMP/test.log" "$RUNNER_TEMP/test-all.log"; do
+            [ -f "$log" ] || continue
+            grep -E '^error(\[|:)|FAILED|panicked at|has been running for over|Running (unittests|tests)' "$log" | tail -n 10 | sed 's/%/%25/g' | cut -c1-300 | while IFS= read -r line; do
+              echo "::error::$line"
+            done
+          done
       - name: Check
         run: cargo check --workspace --locked
       - name: Build subprocess test fixture
@@ -87,7 +104,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Install cargo-audit
         run: cargo install cargo-audit --locked
       - name: Check Cargo.lock against the RustSec database
